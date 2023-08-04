@@ -1,0 +1,259 @@
+#!/usr/bin/env python
+
+# MIT License
+
+# Copyright (c) Jake Ginesin
+
+# Do whatever you want with this idc
+
+import re, os, sys
+from datetime import datetime
+
+class Todo_Item:
+    def __init__(self, description, category, tags, date, parent):
+        self.description = description
+        self.category = category
+        self.tags = tags # is an array
+        self.date = date
+        self.subitems = set()
+        self.parent = parent
+
+    def add_subitem(self, item):
+        self.subitems.add(item)
+
+def filter_by_tag(todo_array, tag_n):
+    ret = []
+    stack = []
+
+    for todo in todo_array:
+        stack.append(todo)
+
+    while stack:
+        todo = stack.pop()
+        if tag_n in todo.tags : ret.append(todo)
+        for item in todo.subitems:
+            stack.append(item)
+        todo.subitems = set()
+
+    return ret
+
+# 
+def filter_by_category(todo_array, category_n):
+    """
+    filters through array and all sub-items, and only keeps 
+    items and subitems with the correct category
+    """
+    ret = []
+    stack = []
+    for todo in todo_array:
+        stack.append(todo)
+
+    while stack:
+        todo = stack.pop()
+        if todo.category == category_n : ret.append(todo)
+        for item in todo.subitems:
+            stack.append(item)
+        todo.subitems = set()
+
+    return ret
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    ITALIC = '\x1B[3m'
+
+def show_help():
+  print("Usage: ")
+  print("  todo [Option]")
+  print("")
+  print("Options: ")
+  print("  show:        show items") 
+  print("  categories:  show in use categories") 
+  print("  tags:        show in use tags") 
+  print("  help:        show help msg ")
+  print("")
+  print("Enter `todo <option> help` for more!")
+
+def show_help_show():
+    print("Usage: ")
+    print("  todo show <arg1> <arg2> ...")
+    print("")
+    print("by default, this just shows everything.")
+    print("")
+    print("Arguments: ")
+    print("  -d --date:                     Sort by date")
+    print("  -c --category:                 Search by category")
+    print("  -t --tag:                      Search by tag")
+    print("  -is --ignore-subitems:         Ignore subitems")
+    print("  -f --file:                     Use a specific file")
+    print("  -scd --show-date               Show today's date in the output")
+    print("  -sct --show-category           Show category in the output")
+    print("  -st --show-tags                Show tags in the output")
+    print("  --help:                        Shows this message, then exists")
+
+def parse_and_print():
+
+    # parse arguments
+    sortByDate = True if "-d" in args or "--date" in args else False
+    categoryToSearch = args[args.index("-c") + 1] if "-c" in args else args[args.index("--category") + 1] if "--category" in args else None
+    searchByTag = args[args.index("-t") + 1] if "-t" in args else args[args.index("--tag") + 1] if "--tag" in args else None
+    ignoreSubitems = True if "-is" in args or "--ignore-subitems" in args else False
+    fileToUse = args[args.index("-f") + 1] if "-f" in args else args[args.index("--file") + 1] if "--file" in args else "/home/synchronous/journal/main.todo"
+    showDate = True if "-scd" in args or "--show-date" in args else False
+    showCategory = True if "-sct" in args or "--show-category" in args else False
+    showTags = True if "-st" in args or "--show-tags" in args else False
+
+    # parse_expr = "^-\s([a-zA-Z\s\:\\0-9\,\/\.\?\_\=\&\']*)(?:\+)?([a-z]*)(?:\s)?((?:#[a-z]*\s)*)?(?:\<([0-9][0-9][0-9][0-9]\-[0-9][0-9]\-[0-9][0-9])\>)?"
+    # parse_expr = "^-\s([a-zA-Z0-9\s\:\\\,\/\?\_\=\&\'\.]*)\+*([a-z]*)(?:\s)?((?:#[a-z]*\s)*)?(?:\<([0-9][0-9][0-9][0-9]\-[0-9][0-9]\-[0-9][0-9])\>)?"
+    parse_expr = "^-\s([a-zA-Z0-9\s\:\\,\/\?\_\=\&'\.\(\)\-]*)\+*([a-z]*)(?:\s)?((?:#[a-z]*\s)*)?(?:\<([0-9][0-9][0-9][0-9]\-[0-9][0-9]\-[0-9][0-9])\>)?"
+
+    items_array = []
+
+    # read file
+    with open(fileToUse, "r") as f:
+        stripped = [s.rstrip() for s in f.readlines()]
+        prev_level = 0
+        last_header = None
+        for line in stripped:
+            data = re.search(parse_expr, line) 
+            if not data:
+                level = len(re.search("^(\s+)-", line).group(1))
+                buffer = "\\s" * level
+
+                parse_expr_buf = "^"+buffer+"-\s([a-zA-Z0-9\s\:\\\,\/\?\_\=\&\'\.]*)\+*([a-z]*)(?:\s)?((?:#[a-z]*\s)*)?(?:\<([0-9][0-9][0-9][0-9]\-[0-9][0-9]\-[0-9][0-9])\>)?"
+                data = re.search(parse_expr_buf, line)
+                if level == prev_level:
+                    # has siblings
+                    # use the last_header note as parent
+                    # do not change last_header
+
+                    header = items_array[last_header]
+                    new_description = data.group(1)
+                    new_category = data.group(2) if data.group(2) is not None else header.category
+                    new_tags = data.group(3).replace(" ","").split("#")[1:] if data.group(3) is not None else header.tags
+                    new_date = data.group(4) if data.group(4) is not None else header.date
+
+                    new_item = Todo_Item(new_description, new_category, new_tags, new_date, header)
+                    header.subitems.add(new_item)
+                    prev_level = level
+
+                elif level > prev_level:
+                    # no siblings (yet)
+                    # use the most recently processed node as parent
+                    # change last_header to prev node
+
+                    header = items_array[last_header]
+                    new_description = data.group(1)
+                    new_category = data.group(2) if data.group(2) is not None else header.category
+                    new_tags = data.group(3).replace(" ","").split("#")[1:] if data.group(3) is not None else header.tags
+                    new_date = data.group(4) if data.group(4) is not None else header.date
+                    
+                    new_item = Todo_Item(new_description, new_category, new_tags, new_date, header)
+                    header.subitems.add(new_item)
+                    prev_level = level
+
+                    last_header = len(items_array) - 1 
+
+            else:
+                description = data.group(1) #or, prob could get something better
+                category = data.group(2)
+                tags = data.group(3).replace(" ","").split("#")[1:]
+                date = data.group(4)
+                prev_level = 0
+
+                new_item = Todo_Item(description, category, tags, date, None)
+                items_array.append(new_item)
+
+                # add that shit
+                last_header = len(items_array) - 1
+
+    res = "Showing results for"
+
+    if categoryToSearch is not None:
+        res+=""+bcolors.OKGREEN+" +"+categoryToSearch+""+bcolors.ENDC+""
+        items_array = filter_by_category(items_array, categoryToSearch)
+
+    if searchByTag is not None:
+        res+=""+bcolors.FAIL+" #"+searchByTag+""+bcolors.ENDC+""
+        items_array = filter_by_tag(items_array, searchByTag)
+
+    #if sortByDate:
+    #    items_array = sorted(items_array, key=lambda obj: datetime.strptime(obj.date, '%Y-%m-%d'))
+
+    if ignoreSubitems:
+        new_items_array = []
+        for item in items_array:
+            if item.parent == None : new_items_array.append(item)
+
+        items_array = new_items_array
+
+    if searchByTag or categoryToSearch:
+        print(res + " in " + str(fileToUse))
+    else:
+        print("Showing results for " + str(fileToUse))
+
+    if showDate:
+        print("Today's date: " + datetime.now().strftime('%Y-%m-%d'))
+
+    print()
+
+    # printing procedure
+
+    def print_procedure(items_array):
+
+        # stack into one array
+        output_arr = []
+        stack = []
+
+        for item in items_array:
+            stack.append(item)
+
+        while stack:
+            item = stack.pop()
+            output_arr.append(item)
+            for subitem in item.subitems:
+                stack.append(subitem)
+
+        if sortByDate:
+            output_arr = sorted(output_arr, key=lambda obj: datetime.strptime(obj.date, '%Y-%m-%d'))
+
+        count = 1
+        for item in output_arr:
+
+            out = bcolors.WARNING + "(" + str(count) + ")" + bcolors.ENDC + " - " + bcolors.OKBLUE + item.date + bcolors.ENDC + " - " +  bcolors.ITALIC + item.description + bcolors.ENDC
+
+            if showCategory:
+                if item.category != None:
+                    out += "" + bcolors.OKGREEN + "+" + item.category + bcolors.ENDC
+
+            if showTags:
+                if item.tags != []:
+                    out += "" + bcolors.FAIL + "#" + " #".join(item.tags) + bcolors.ENDC
+
+            print(out)
+
+            count+=1
+
+    print_procedure(items_array)
+
+args = sys.argv
+if len(args) == 1:
+    show_help()
+    sys.exit()
+
+match args[1]:
+    case "show":
+        if len(args) == 2:
+            parse_and_print()
+        elif args[2] == "help" or args[2] == "--help":
+            show_help_show()
+            sys.exit()
+        else:
+            parse_and_print()
