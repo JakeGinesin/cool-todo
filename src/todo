@@ -91,11 +91,27 @@ def show_help_show():
     print("  -d --date:                     Sort by date")
     print("  -c --category:                 Search by category")
     print("  -t --tag:                      Search by tag")
-    print("  -is --ignore-subitems:         Ignore subitems")
+    # print("  -is --ignore-subitems:         Ignore subitems")
     print("  -f --file:                     Use a specific file")
     print("  -scd --show-date               Show today's date in the output")
     print("  -sct --show-category           Show category in the output")
     print("  -st --show-tags                Show tags in the output")
+    print("  --help:                        Shows this message, then exists")
+
+def show_help_categories():
+    print("Usage: ")
+    print("  todo categories <arg1> <arg2> ...")
+    print("")
+    print("Arguments: ")
+    print("  -f --file:                     Use a specific file")
+    print("  --help:                        Shows this message, then exists")
+
+def show_help_tags():
+    print("Usage: ")
+    print("  todo tags <arg1> <arg2> ...")
+    print("")
+    print("Arguments: ")
+    print("  -f --file:                     Use a specific file")
     print("  --help:                        Shows this message, then exists")
 
 def parse_and_print():
@@ -243,12 +259,55 @@ def parse_and_print():
 
     print_procedure(items_array)
 
+def show_categories():
+    fileToUse = args[args.index("-f") + 1] if "-f" in args else args[args.index("--file") + 1] if "--file" in args else "/home/synchronous/journal/main.todo"
+    print("Showing categories for " + str(fileToUse))
+    categories = set()
+
+    parse_expr = "^\s*-\s([a-zA-Z0-9\s\:\\,\/\?\_\=\&'\.\(\)\-]*)\+*([a-z]*)(?:\s)?((?:#[a-z]*\s)*)?(?:\<([0-9][0-9][0-9][0-9]\-[0-9][0-9]\-[0-9][0-9])\>)?"
+
+    with open(fileToUse, "r") as f:
+        stripped = [s.rstrip() for s in f.readlines()]
+        for line in stripped:
+            data = re.search(parse_expr, line) 
+            if data.group(2) != "":
+                categories.add(data.group(2))
+
+    print()
+
+    # pretty print
+    for category in categories:
+        print(bcolors.OKGREEN + "+" + category + bcolors.ENDC)
+
+def show_tags():
+    fileToUse = args[args.index("-f") + 1] if "-f" in args else args[args.index("--file") + 1] if "--file" in args else "/home/synchronous/journal/main.todo"
+    print("Showing tags for " + str(fileToUse))
+    tags = set()
+
+    parse_expr = "^\s*-\s([a-zA-Z0-9\s\:\\,\/\?\_\=\&'\.\(\)\-]*)\+*([a-z]*)(?:\s)?((?:#[a-z]*\s)*)?(?:\<([0-9][0-9][0-9][0-9]\-[0-9][0-9]\-[0-9][0-9])\>)?"
+
+    with open(fileToUse, "r") as f:
+        stripped = [s.rstrip() for s in f.readlines()]
+        for line in stripped:
+            data = re.search(parse_expr, line) 
+            if data.group(3) != "":
+                tags.update(data.group(3).replace(" ","").split("#")[1:])
+
+    print()
+
+    # pretty print
+    for tag in tags:
+        print(bcolors.FAIL + "#" + tag + bcolors.ENDC)
+
+
 args = sys.argv
 if len(args) == 1:
     show_help()
     sys.exit()
 
 match args[1]:
+    case "help":
+        show_help()
     case "show":
         if len(args) == 2:
             parse_and_print()
@@ -257,3 +316,22 @@ match args[1]:
             sys.exit()
         else:
             parse_and_print()
+    case "categories":
+        if len(args) == 2:
+            show_categories()
+        elif args[2] == "help" or args[2] == "--help":
+            show_help_category()
+            sys.exit()
+        else:
+            show_categories()
+    case "tags":
+        if len(args) == 2:
+            show_tags()
+        elif args[2] == "help" or args[2] == "--help":
+            show_help_tag()
+            sys.exit()
+        else:
+            show_tags()
+    case _:
+        show_help()
+        sys.exit()
