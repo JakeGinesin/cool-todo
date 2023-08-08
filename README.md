@@ -70,6 +70,7 @@ Arguments:
 Searching for a specific category, sorting by date, showing current date
 ```
 $ todo show -c learning -d --show-date
+
 Showing results for +learning in /path/main.todo
 Today's date: 2023-08-08
 
