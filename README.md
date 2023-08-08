@@ -1,4 +1,4 @@
-# cool-todo-sh
+# cool-todo
 I like to organize my todo list in a specific way. This is a command-line utility to interface with my todo list.
 
 # Syntax
@@ -33,3 +33,48 @@ cd cool-todo-sh && make
 ```
 
 # Usage
+```
+$ todo help
+
+Usage: 
+  todo [Option]
+
+Options: 
+  show:        show items
+  categories:  show in use categories
+  tags:        show in use tags
+  help:        show help msg 
+
+Enter `todo <option> help` for more!
+```
+
+```
+$ todo show help
+
+Usage: 
+  todo show <arg1> <arg2> ...
+
+by default, this just shows everything.
+
+Arguments: 
+  -d --date:                     Sort by date
+  -c --category:                 Search by category
+  -t --tag:                      Search by tag
+  -f --file:                     Use a specific file
+  -scd --show-date               Show today's date in the output
+  -sct --show-category           Show category in the output
+  -st --show-tags                Show tags in the output
+  --help:                        Shows this message, then exists
+```
+
+Searching for a specific category, sorting by date, showing current date
+```
+$ todo show -c learning -d --show-date
+Showing results for +learning in /path/main.todo
+Today's date: 2023-08-08
+
+(1) - 2023-08-07 - third chaotic dynamics read
+(2) - 2023-09-01 - learn TLA https://learntla.com/
+(3) - 2023-09-02 - go through previous cs7800 notes: https://www.ccs.neu.edu/home/hlnguyen/cs7800/fall19/schedule.html
+(4) - 2023-09-05 - learning coq via the FRAP course (https://demo.allennlp.org/coreference-resolution/s/upon-receipt-of-an-chunk/S3A6W3Y3T2)
+```
