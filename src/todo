@@ -247,7 +247,7 @@ def parse_and_print():
 
             if showCategory:
                 if item.category != None:
-                    out += "" + bcolors.OKGREEN + "+" + item.category + bcolors.ENDC
+                    out += "" + bcolors.OKGREEN + "+" + item.category + bcolors.ENDC + " " 
 
             if showTags:
                 if item.tags != []:
